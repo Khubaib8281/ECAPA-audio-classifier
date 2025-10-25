@@ -38,17 +38,36 @@ This project serves as a **proof-of-concept** highlighting how ECAPA embeddings 
 ## 🚀 Usage Example
 
 ```python
+import joblib
 from speechbrain.pretrained import EncoderClassifier
 import torch
+import warnings
 
-# Load model
-model = torch.load("ECAPA_acoustic_domain_classifier.pkl", map_location="cpu")
+# Suppress unnecessary warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
 
-# Example inference (pseudo code)
-audio_tensor = load_audio("sample.wav")  # your function to load audio as torch tensor
-embedding = model.encode_batch(audio_tensor)
-prediction = model.classify(embedding)
-print(prediction)  # -> "speech", "music", or "noise"
+# Load trained logistic regression model
+loaded_model = joblib.load("custom_audio_classifier.pkl")
+print("Model loaded successfully")
+
+# Load ECAPA embedding extractor
+classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
+
+# Prediction function
+def prediction(filename, clf_name):
+    audio = filename
+    clf = clf_name
+    signal = classifier.load_audio(audio)
+    embd = classifier.encode_batch(signal).detach().cpu().numpy().mean(axis=1)
+    prediction = clf.predict(embd)
+    proba = clf.predict_proba(embd)
+    
+    print("Predicted Class:", prediction[0])
+    print("Class order:", clf.classes_)
+    print("Class Probabilities:", proba[0])
+
+# Example inference
+prediction(filename="A_voice.opus", clf_name=loaded_model) #-. music/ noise/ speech
 ```
 
 ---
